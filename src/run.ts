@@ -1,4 +1,5 @@
-import { bodyMentionsDriving, classifyLocation, classifyTitle } from './classify.js';
+import { bodyMentionsDriving, classifyFactoryTitle, classifyLocation, classifyTitle, isApprenticeship, type RoleDecision } from './classify.js';
+import { belowPayFloor } from './pay.js';
 import { escapeHtml } from './telegram.js';
 import type { Company, RawVacancy } from './types.js';
 import type { State } from './state.js';
@@ -112,7 +113,7 @@ async function handleVacancy(
 interface Decision {
   send: boolean;
   reason: string;
-  role?: 'driver' | 'frontline' | 'possible' | 'unclassified';
+  role?: 'driver' | 'frontline' | 'factory' | 'possible' | 'unclassified';
   location?: 'in-range' | 'unclear';
 }
 
@@ -131,7 +132,10 @@ async function decide(
   company: Company,
   raw: RawVacancy,
 ): Promise<{ decision: Decision; vacancy: RawVacancy }> {
-  let role = company.driverTitles?.test(raw.title) ? { role: 'driver' as const } : classifyTitle(raw.title);
+  let role: RoleDecision =
+    company.category === 'factory' ? classifyFactoryTitle(raw.title)
+    : company.driverTitles?.test(raw.title) ? { role: 'driver' }
+    : classifyTitle(raw.title);
   if (role.role === 'frontline' && company.driverOnly) role = { role: 'unclassified' };
   if (role.role === null) return { decision: { send: false, reason: role.reason }, vacancy: raw };
 
@@ -140,9 +144,13 @@ async function decide(
   const vacancy = await enrich(deps, company, raw);
   const location = classifyLocation(vacancy.locationText, company.inRange, vacancy.title);
   if (location === 'out-of-range') return { decision: { send: false, reason: 'out of range' }, vacancy };
+  if (company.category === 'factory' && !isApprenticeship(vacancy.title) && belowPayFloor(vacancy.salary)) {
+    return { decision: { send: false, reason: 'below pay floor' }, vacancy };
+  }
 
-  if (role.role === 'driver') return { decision: { send: true, reason: 'driver title', role: 'driver', location }, vacancy };
-  if (role.role === 'frontline') return { decision: { send: true, reason: 'frontline title', role: 'frontline', location }, vacancy };
+  if (role.role !== 'unclassified') {
+    return { decision: { send: true, reason: `${role.role} title`, role: role.role, location }, vacancy };
+  }
 
   // Title did not settle it: read the advert. Fail open if the page cannot be read.
   try {
@@ -159,7 +167,7 @@ async function decide(
 
 export function formatVacancy(company: Company, v: RawVacancy, d: Decision): string {
   const lines = [
-    d.role === 'frontline' ? '🎫 FRONTLINE' : '🚆 DRIVER',
+    d.role === 'frontline' ? '🎫 FRONTLINE' : d.role === 'factory' ? '🏭 FACTORY' : '🚆 DRIVER',
     `<b>${escapeHtml(v.title)}</b>`,
     `${escapeHtml(company.name)} · ${escapeHtml(v.locationText?.trim() || 'location not stated')}`,
   ];

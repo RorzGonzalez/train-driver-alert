@@ -36,10 +36,10 @@ function makeNotifiers() {
   const sendFamily = makeSender(token, chatId);
   const sendAdmin = makeSender(token, process.env.ADMIN_CHAT_ID ?? chatId);
   return {
-    // Pause after each message so a busy run stays under Telegram's per-chat rate limit.
+    // Pause after each message so a busy run stays under Telegram's limit of about 20 a minute per group.
     notify: async (html: string) => {
       await sendFamily(html);
-      await sleep(1500);
+      await sleep(3100);
     },
     notifyAdmin: sendAdmin,
   };

@@ -22,6 +22,9 @@ const FRONTLINE_WORDS =
 
 const APPRENTICE = /\bapprentice(?:ship)?s?\b/;
 
+/** Apprenticeships are paid apprentice rates by law, so the factory pay floor does not apply to them. */
+export const isApprenticeship = (title: string): boolean => APPRENTICE.test(title.toLowerCase());
+
 // Desk jobs that borrow a frontline word ("Platform Software Engineer",
 // "Revenue Systems Analyst") and desk apprenticeships.
 const DESK_WORDS =
@@ -37,6 +40,7 @@ const OTHER_ROLE =
 export type RoleDecision =
   | { role: 'driver' }
   | { role: 'frontline' }
+  | { role: 'factory' }
   | { role: 'unclassified' }
   | { role: null; reason: string };
 
@@ -58,6 +62,36 @@ export function classifyTitle(rawTitle: string): RoleDecision {
   }
   if (OTHER_ROLE.test(title)) return { role: null, reason: 'other role' };
   return { role: 'unclassified' };
+}
+
+// Factory and warehouse floor roles, used for the factory companies instead of
+// the rail rules above. Forklift and shunting are wanted here, not excluded.
+const MHE_WORDS =
+  /\b(?:fork[\s-]?lifts?|flt|mhe|counterbalance|reach(?:\s+truck)?|vna|hlop|llop|ppt|shunters?|shunting|drivers?'?s?\s+mates?)\b/;
+const ROAD_DRIVER = /\bdrivers?\b|\bdriving\b|\bcourier\b/;
+// Needs a vocational licence they do not hold, whatever else the title says.
+const ROAD_LICENCE = /\b(?:hgv|lgv|class\s?[12]|c\+e|cat(?:egory)?\s?c|7\.5\s?t\w*|artic\w*)\b/;
+const FACTORY_WORDS =
+  /\b(?:operat(?:ive|or)s?|production|manufacturing|warehouse|handlers?|packers?|packing|pickers?|picking|loaders?|loading|labourers?|assembly|assemblers?|yard|pdi|despatch|dispatch|goods\s+in|hygiene)\b/;
+const FACTORY_OTHER = /\b(?:lead|leader|chief|specialist|officer|executive|consultant|graduate|interns?|internship|placement|controller)\b/;
+// Cleaning counts as frontline on the trains, not as factory work; hygiene is the food factories' word for it.
+const CLEANING = /\bclean\w*\b|\bhygiene\b/;
+
+export function classifyFactoryTitle(rawTitle: string): RoleDecision {
+  const title = rawTitle.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (APPRENTICE.test(title)) {
+    return DESK_WORDS.test(title) ? { role: null, reason: 'office apprenticeship' } : { role: 'factory' };
+  }
+  if (ROAD_LICENCE.test(title) || (ROAD_DRIVER.test(title) && !MHE_WORDS.test(title))) {
+    return { role: null, reason: 'road driver' };
+  }
+  if (CLEANING.test(title)) return { role: null, reason: 'cleaning role' };
+  if (!FACTORY_WORDS.test(title) && !MHE_WORDS.test(title)) return { role: null, reason: 'no factory title' };
+  // "Resource Recovery" is a PepsiCo department, not a resourcing desk.
+  const rest = title.replace(/\bresource recovery\b/g, '');
+  if (SUPPORT_ROLE.test(rest)) return { role: null, reason: 'factory support role' };
+  if (DESK_WORDS.test(rest) || TRADE_WORDS.test(rest) || FACTORY_OTHER.test(rest)) return { role: null, reason: 'other role' };
+  return { role: 'factory' };
 }
 
 export type LocationDecision = 'in-range' | 'unclear' | 'out-of-range';

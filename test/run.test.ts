@@ -277,4 +277,37 @@ describe('company-specific behaviour', () => {
     await runOnce(deps);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('judges a factory company with the factory rules, labels it, and never reads the advert', async () => {
+    const fetchBodyText = vi.fn(async () => '');
+    const deps = makeDeps(
+      [
+        company(
+          async () => [
+            vacancy({ externalId: 'wo', title: 'Warehouse Operative Nights', locationText: 'Rugby, ENG, GB, CV23 0WB', salary: '£31,153.49', closingDate: null }),
+            vacancy({ externalId: 'c1', title: 'Class 1 Driver', locationText: 'Rugby, ENG, GB, CV23 0WB' }),
+            vacancy({ externalId: 'ic', title: 'Inventory Coordinator', locationText: 'Rugby, ENG, GB, CV23 0WB' }),
+            vacancy({ externalId: 'tt', title: 'Trainee Train Driver', locationText: 'Rugby, ENG, GB, CV23 0WB' }),
+            vacancy({ externalId: 'far', title: 'Warehouse Operative', locationText: 'Warrington, ENG, GB, WA5 4AH' }),
+            vacancy({ externalId: 'low', title: 'Warehouse Operative', locationText: 'Rugby, ENG, GB, CV23 0WB', salary: '£12.71 per hour' }),
+            vacancy({ externalId: 'app', title: 'Supply Chain Apprentice', locationText: 'Rugby', salary: '£8.66', closingDate: null }),
+          ],
+          { slug: 'gxo', name: 'GXO', category: 'factory', inRange: ['rugby'] },
+        ),
+      ],
+      { fetchBodyText },
+    );
+    expect(await runOnce(deps)).toMatchObject({ sent: 2, suppressed: 5 });
+    expect(deps.sent[0]).toBe(
+      '🏭 FACTORY\n<b>Warehouse Operative Nights</b>\nGXO · Rugby, ENG, GB, CV23 0WB\n💷 £31,153.49\n<a href="https://example.com/jobs/1">Open advert</a>',
+    );
+    expect(deps.state.seen['gxo:wo']).toMatchObject({ sent: true, reason: 'factory title' });
+    expect(deps.state.seen['gxo:c1']).toMatchObject({ sent: false, reason: 'road driver' });
+    expect(deps.state.seen['gxo:ic']).toMatchObject({ sent: false, reason: 'no factory title' });
+    expect(deps.state.seen['gxo:tt']).toMatchObject({ sent: false, reason: 'road driver' });
+    expect(deps.state.seen['gxo:far']).toMatchObject({ sent: false, reason: 'out of range' });
+    expect(deps.state.seen['gxo:low']).toMatchObject({ sent: false, reason: 'below pay floor' });
+    expect(deps.state.seen['gxo:app']).toMatchObject({ sent: true, reason: 'factory title' });
+    expect(fetchBodyText).not.toHaveBeenCalled();
+  });
 });

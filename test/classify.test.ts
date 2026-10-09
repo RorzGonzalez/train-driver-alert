@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bodyMentionsDriving, classifyLocation, classifyTitle } from '../src/classify.js';
+import { bodyMentionsDriving, classifyFactoryTitle, classifyLocation, classifyTitle } from '../src/classify.js';
 
 describe('classifyTitle', () => {
   it.each([
@@ -144,5 +144,76 @@ describe('bodyMentionsDriving', () => {
   it('ignores a driving licence requirement', () => {
     expect(bodyMentionsDriving('A full UK driving licence is required for this mobile role.')).toBe(false);
     expect(bodyMentionsDriving('Working closely with drivers and guards on the platform.')).toBe(false);
+  });
+});
+
+describe('classifyFactoryTitle', () => {
+  it.each([
+    'Shift Operator - Green Shift',
+    'Warehouse Operative Nights',
+    'Warehouse Operative  Full Time',
+    'Shunter Driver',
+    'Shunter',
+    'Drivers Mate',
+    "Driver's Mate",
+    'Lorry Loader',
+    'Warehouse Super User',
+    'Production Operator',
+    'General Support Operative',
+    'Manufacturing Support',
+    'production operative',
+    'material handler - warehouse operative',
+    'material handler - flt license required',
+    'PDI Inspector',
+    'Supply Chain Apprentice',
+    'Counterbalance Driver',
+    'Reach Driver',
+    'VNA / HLOP Operator',
+    'Resource Recovery Operative',
+    'Packing/Manufacturing Operative',
+    'Forklift Driver',
+    'Yard Operative',
+  ])('"%s" is a factory role', (title) => {
+    expect(classifyFactoryTitle(title)).toEqual({ role: 'factory' });
+  });
+
+  it.each([
+    ['Class 1 Driver', 'road driver'],
+    ['Driver Class 2', 'road driver'],
+    ['Class 2', 'road driver'],
+    ['HGV Shunter Driver', 'road driver'],
+    ['Class 1 Shunter', 'road driver'],
+    ['Courier', 'road driver'],
+    ['Delivery Driver', 'road driver'],
+    ['Trainee Train Driver', 'road driver'],
+    ['Shift Process Leader - Front End - Green Shift', 'no factory title'],
+    ['Quality Manager', 'no factory title'],
+    ['Inventory Coordinator', 'no factory title'],
+    ['Laboratory Technician (12-months secondment)', 'no factory title'],
+    ['Process Lead (12 Month FTC)', 'no factory title'],
+    ['Research & Development Industrial Placement - Product Development 2027', 'no factory title'],
+    ['Flow Room Controller', 'no factory title'],
+    ['Welder', 'no factory title'],
+    ['HR Support Administrator', 'no factory title'],
+    ['General Application - Engineering', 'no factory title'],
+    ['Reliability Engineer CBM', 'no factory title'],
+    ['Administrative Assistant', 'no factory title'],
+    ['Billing Analyst', 'no factory title'],
+    ['UK Transport Planner', 'no factory title'],
+    ['Facilities FLM (Days Based) - Environmental & Resource Recovery Operations Manager', 'no factory title'],
+    ['Warehouse First Line Manager (Nights) | Rugby | Haier', 'factory support role'],
+    ['MHE Trainer Nights', 'factory support role'],
+    ['Plant Manager - Paint', 'no factory title'],
+    ['Warehouse Administrator', 'factory support role'],
+    ['Production Team Leader', 'factory support role'],
+    ['Warehouse Operative Supervisor', 'factory support role'],
+    ['Production Engineer', 'other role'],
+    ['Warehouse Systems Lead', 'other role'],
+    ['Cleaning Operative', 'cleaning role'],
+    ['Industrial Cleaner', 'cleaning role'],
+    ['Hygiene Operative', 'cleaning role'],
+    ['Finance Apprentice', 'office apprenticeship'],
+  ])('"%s" is excluded as %s', (title, reason) => {
+    expect(classifyFactoryTitle(title)).toEqual({ role: null, reason });
   });
 });
