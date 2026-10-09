@@ -7,3 +7,6 @@ tmp/
 # This instance's notes and state live in the private repository, cloned here as .docs
 .docs/
 state/
+# Cloudflare Worker trigger: local wrangler cache and generated types
+trigger/.wrangler/
+trigger/worker-configuration.d.ts

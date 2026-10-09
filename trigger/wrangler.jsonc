@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "train-driver-alert-trigger",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-09",
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "observability": { "enabled": true }
+}

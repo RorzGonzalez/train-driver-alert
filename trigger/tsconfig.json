@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "types": [
+      "./worker-configuration.d.ts"
+    ],
+    "lib": [
+      "ES2022"
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}
