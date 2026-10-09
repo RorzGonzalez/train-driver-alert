@@ -2,7 +2,8 @@ name: Poll for vacancies
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # Seven past the quarter: the quarter-hours themselves are GitHub's busiest slots and get skipped.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 # One run at a time, so two runs never race on the state file.
