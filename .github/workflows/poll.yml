@@ -1,0 +1,91 @@
+name: Poll for vacancies
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# One run at a time, so two runs never race on the state file.
+concurrency:
+  group: poll
+  cancel-in-progress: false
+
+# Write access to this repository is only for the keepalive commit below.
+permissions:
+  contents: write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+      STATE_PATH: private/state/state.json
+      QUIET: 'true'
+    steps:
+      - name: Check secrets
+        id: check
+        env:
+          PRIVATE_REPO_KEY: ${{ secrets.PRIVATE_REPO_KEY }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ] || [ -z "$PRIVATE_REPO_KEY" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID and PRIVATE_REPO_KEY are required; nothing to do"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.check.outputs.ready == 'true'
+
+      # The state file lives in the private repository, checked out with a deploy key.
+      - uses: actions/checkout@v7
+        if: steps.check.outputs.ready == 'true'
+        with:
+          repository: RorzGonzalez/train-driver-alert-private
+          ssh-key: ${{ secrets.PRIVATE_REPO_KEY }}
+          path: private
+
+      - uses: pnpm/action-setup@v6
+        if: steps.check.outputs.ready == 'true'
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v7
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.check.outputs.ready == 'true'
+
+      - run: pnpm once
+        if: steps.check.outputs.ready == 'true'
+
+      - name: Save state
+        if: steps.check.outputs.ready == 'true'
+        working-directory: private
+        run: |
+          git config user.name "train-driver-alert"
+          git config user.email "train-driver-alert@users.noreply.github.com"
+          git add state/state.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "state: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git pull --rebase
+          git push
+
+      # GitHub disables a schedule after 60 days without a commit to the repository
+      # that runs it, and the state commits go elsewhere.
+      - name: Keep the schedule alive
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          if [ $(( $(date +%s) - $(git log -1 --format=%ct) )) -lt $((45 * 86400)) ]; then exit 0; fi
+          git config user.name "train-driver-alert"
+          git config user.email "train-driver-alert@users.noreply.github.com"
+          date -u +%Y-%m-%dT%H:%M:%SZ > .github/last-run
+          git add .github/last-run
+          git commit -m "keepalive"
+          git push

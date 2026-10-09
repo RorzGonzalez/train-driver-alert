@@ -1,0 +1,9 @@
+node_modules/
+tmp/
+.DS_Store
+.env
+*.log
+.playwright-mcp/
+# This instance's notes and state live in the private repository, cloned here as .docs
+.docs/
+state/

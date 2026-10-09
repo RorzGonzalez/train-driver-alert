@@ -1,0 +1,21 @@
+name: Debug fetch
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        required: true
+permissions: {}
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    env:
+      URL: ${{ inputs.url }}
+    steps:
+      - run: |
+          curl -sS -D headers.txt -o body.html -A 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 train-driver-alert/1.0' "$URL"
+          echo "== headers"; head -20 headers.txt
+          echo "== size"; wc -c body.html
+          echo "== table-counts"; grep -o 'table-counts.\{0,120\}' body.html || echo none
+          echo "== job rows"; grep -c 'data-job-url' body.html || true
+          echo "== title"; grep -o '<title>[^<]*' body.html | head -2
+          echo "== first 60 lines of text"; sed -e 's/<[^>]*>/ /g' body.html | tr -s ' \n' | head -60
