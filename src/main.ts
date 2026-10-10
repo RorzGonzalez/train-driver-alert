@@ -18,7 +18,7 @@ const only = [...args].find((a) => a.startsWith('--only='))?.slice(7);
 const quiet = process.env.QUIET === 'true';
 
 const statePath = process.env.STATE_PATH ?? 'tmp/state.json';
-const intervalMs = Number(process.env.INTERVAL_MINUTES ?? 15) * 60_000;
+const intervalMs = Number(process.env.INTERVAL_MINUTES ?? 60) * 60_000;
 
 const log = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

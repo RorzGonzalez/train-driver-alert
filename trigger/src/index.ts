@@ -1,4 +1,4 @@
-// Starts the poll workflow on GitHub every 15 minutes. GitHub's own cron never
+// Starts the poll workflow on GitHub every hour. GitHub's own cron never
 // delivered a tick to this repository, so the schedule lives here instead.
 // Secrets: GITHUB_TOKEN (fine-grained, Actions read and write on the one repo);
 // TELEGRAM_BOT_TOKEN and ADMIN_CHAT_ID, optional, to report a refused dispatch.

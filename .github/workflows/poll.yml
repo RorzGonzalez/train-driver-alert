@@ -1,6 +1,6 @@
 name: Poll for vacancies
 
-# Started every 15 minutes by the Cloudflare Worker in trigger/, which calls the
+# Started every hour by the Cloudflare Worker in trigger/, which calls the
 # workflow-dispatch endpoint. GitHub's own schedule never delivered a run here.
 on:
   workflow_dispatch:
