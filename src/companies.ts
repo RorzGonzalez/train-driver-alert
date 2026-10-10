@@ -141,7 +141,7 @@ export const companies: Company[] = [
     name: 'Colas Rail',
     inRange: [...FREIGHT, 'derby'],
     fetch: fetchColas,
-    pollEveryMinutes: 60,
+    pollEveryMinutes: 50,
   },
   // Factory and warehouse employers, judged with the factory title rules.
   {
